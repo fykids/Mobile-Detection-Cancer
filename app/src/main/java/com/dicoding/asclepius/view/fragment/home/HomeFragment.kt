@@ -48,8 +48,12 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         homeViewModel = obtainViewModel(this@HomeFragment)
 
-        history = requireActivity().intent.getParcelableExtra(EXTRA_HISTORY)
-        history = History()
+        // Observasi perubahan URI gambar
+        homeViewModel.currentImageUri.observe(viewLifecycleOwner) { uri ->
+            uri?.let {
+                showImage(it)
+            }
+        }
 
         binding.galleryButton.setOnClickListener { startGallery() }
         binding.analyzeButton.setOnClickListener {
@@ -74,19 +78,15 @@ class HomeFragment : Fragment() {
             ActivityResultContracts.PickVisualMedia()
         ) { uri : Uri? ->
             if (uri != null) {
-                currentImageUri = uri
-                showImage()
+                homeViewModel.setCurrentImageUri(uri)
             } else {
                 Log.d("Photo Picker", "No Media Selected")
             }
         }
 
-    private fun showImage() {
-        // TODO: Menampilkan gambar sesuai Gallery yang dipilih.
-        currentImageUri.let {
-            Log.d("Image URI", "showImage: $it")
-            binding.previewImageView.setImageURI(it)
-        }
+    private fun showImage(uri : Uri) {
+        Log.d("Image URI", "showImage: $uri")
+        binding.previewImageView.setImageURI(uri)
     }
 
     private fun analyzeImage() {
