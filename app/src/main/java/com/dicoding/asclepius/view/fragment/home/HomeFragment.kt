@@ -90,46 +90,45 @@ class HomeFragment : Fragment() {
     }
 
     private fun analyzeImage() {
-        // TODO: Menganalisa gambar yang berhasil ditampilkan.
-        binding.progressIndicator.visibility = View.VISIBLE
-        classifyStaticImage = ImageClassifierHelper(
-            context = requireContext(),
-            classifierListener = object : ImageClassifierHelper.ClassifierListener {
-                override fun onError(error : String) {
-                    requireActivity().runOnUiThread {
-                        binding.progressIndicator.visibility = View.GONE
-                        Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                override fun onResults(
-                    result : List<Classifications>?,
-                    interfaceTime : Long,
-                ) {
-                    binding.progressIndicator.visibility = View.GONE
-                    result?.let { it ->
-                        if (it.isNotEmpty() && it[0].categories.isNotEmpty()) {
-                            print(it)
-                            val sortedCategories =
-                                it[0].categories.sortedByDescending { it?.score }
-                            val displayResult =
-                                sortedCategories.joinToString("\n") {
-                                    "${it.label} " + NumberFormat.getPercentInstance()
-                                        .format(it.score).trim()
-                                }
-                            moveToResult(displayResult)
-                        } else {
+        // Cek apakah URI gambar sudah dipilih
+        homeViewModel.currentImageUri.value?.let { uri ->
+            // Menampilkan progress indicator saat analisis dimulai
+            binding.progressIndicator.visibility = View.VISIBLE
+            classifyStaticImage = ImageClassifierHelper(
+                context = requireContext(),
+                classifierListener = object : ImageClassifierHelper.ClassifierListener {
+                    override fun onError(error: String) {
+                        requireActivity().runOnUiThread {
                             binding.progressIndicator.visibility = View.GONE
-                            showToast(getString(R.string.pilih_gambarnya_dulu_ya))
+                            Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    override fun onResults(result: List<Classifications>?, interfaceTime: Long) {
+                        binding.progressIndicator.visibility = View.GONE
+                        result?.let {
+                            if (it.isNotEmpty() && it[0].categories.isNotEmpty()) {
+                                val sortedCategories =
+                                    it[0].categories.sortedByDescending { it?.score }
+                                val displayResult =
+                                    sortedCategories.joinToString("\n") {
+                                        "${it.label} " + NumberFormat.getPercentInstance()
+                                            .format(it.score).trim()
+                                    }
+                                moveToResult(displayResult)
+                            } else {
+                                binding.progressIndicator.visibility = View.GONE
+                                showToast(getString(R.string.pilih_gambarnya_dulu_ya))
+                            }
                         }
                     }
                 }
-            }
-        )
-        currentImageUri?.let {
-            classifyStaticImage.classifyStaticImage(it)
-        }
+            )
+            // Lakukan klasifikasi gambar
+            classifyStaticImage.classifyStaticImage(uri)
+        } ?: showToast(getString(R.string.pilih_gambarnya_dulu_ya))
     }
+
 
     private fun moveToResult(displayResult : String) {
 
