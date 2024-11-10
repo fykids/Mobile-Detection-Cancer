@@ -25,32 +25,33 @@ import java.text.NumberFormat
 @Suppress("DEPRECATION")
 class HomeFragment : Fragment() {
 
-    private var currentImageUri : Uri? = null
+    private var currentImageUri: Uri? = null
 
-    private lateinit var classifyStaticImage : ImageClassifierHelper
+    private lateinit var classifyStaticImage: ImageClassifierHelper
 
-    private var _binding : FragmentHomeBinding? = null
+    private var _binding: FragmentHomeBinding? = null
     val binding get() = _binding!!
 
-    private lateinit var homeViewModel : HomeViewModel
+    private lateinit var homeViewModel: HomeViewModel
 
-    private var history : History? = null
+    private var history: History? = null
 
     override fun onCreateView(
-        inflater : LayoutInflater, container : ViewGroup?,
-        savedInstanceState : Bundle?,
-    ) : View {
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
 
-    override fun onViewCreated(view : View, savedInstanceState : Bundle?) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         homeViewModel = obtainViewModel(this@HomeFragment)
 
         // Observasi perubahan URI gambar
         homeViewModel.currentImageUri.observe(viewLifecycleOwner) { uri ->
             uri?.let {
+                currentImageUri = it
                 showImage(it)
             }
         }
@@ -58,41 +59,42 @@ class HomeFragment : Fragment() {
         binding.galleryButton.setOnClickListener { startGallery() }
         binding.analyzeButton.setOnClickListener {
             currentImageUri?.let {
+                Log.d("AnalyzeButton", "Selected image URI: $it") // Log URI yang dipilih
                 analyzeImage()
-            }
+            } ?: showToast(getString(R.string.pilih_gambarnya_dulu_ya))
         }
     }
 
-    private fun obtainViewModel(fragment : Fragment) : HomeViewModel {
+    private fun obtainViewModel(fragment: Fragment): HomeViewModel {
         val factory = HistoryViewModelFactory.getInstance(fragment.requireActivity().application)
         return ViewModelProvider(fragment, factory)[HomeViewModel::class.java]
     }
 
     private fun startGallery() {
-        // TODO: Mendapatkan gambar dari Gallery.
+        // Memulai memilih gambar dari gallery
         launcherIntentGallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 
     private val launcherIntentGallery =
         registerForActivityResult(
             ActivityResultContracts.PickVisualMedia()
-        ) { uri : Uri? ->
+        ) { uri: Uri? ->
             if (uri != null) {
+                Log.d("Gallery", "Image selected: $uri") // Log gambar yang dipilih
                 homeViewModel.setCurrentImageUri(uri)
             } else {
-                Log.d("Photo Picker", "No Media Selected")
+                Log.d("Gallery", "No image selected")
             }
         }
 
-    private fun showImage(uri : Uri) {
-        Log.d("Image URI", "showImage: $uri")
+    private fun showImage(uri: Uri) {
+        Log.d("Image URI", "showImage: $uri") // Log URI gambar yang ditampilkan
         binding.previewImageView.setImageURI(uri)
     }
 
     private fun analyzeImage() {
-        // Cek apakah URI gambar sudah dipilih
-        homeViewModel.currentImageUri.value?.let { uri ->
-            // Menampilkan progress indicator saat analisis dimulai
+        // Pastikan URI gambar tidak null sebelum melakukan klasifikasi
+        currentImageUri?.let { uri ->
             binding.progressIndicator.visibility = View.VISIBLE
             classifyStaticImage = ImageClassifierHelper(
                 context = requireContext(),
@@ -115,9 +117,9 @@ class HomeFragment : Fragment() {
                                         "${it.label} " + NumberFormat.getPercentInstance()
                                             .format(it.score).trim()
                                     }
+                                Log.d("AnalyzeResult", "Classification result: $displayResult")
                                 moveToResult(displayResult)
                             } else {
-                                binding.progressIndicator.visibility = View.GONE
                                 showToast(getString(R.string.pilih_gambarnya_dulu_ya))
                             }
                         }
@@ -129,9 +131,8 @@ class HomeFragment : Fragment() {
         } ?: showToast(getString(R.string.pilih_gambarnya_dulu_ya))
     }
 
-
-    private fun moveToResult(displayResult : String) {
-
+    private fun moveToResult(displayResult: String) {
+        Log.d("ResultActivity", "Moving to result with: $displayResult")
         history = History(
             results = displayResult,
             imageClassifier = currentImageUri.toString(),
@@ -146,7 +147,7 @@ class HomeFragment : Fragment() {
         startActivity(intent)
     }
 
-    private fun showToast(message : String) {
+    private fun showToast(message: String) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
 
